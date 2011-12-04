@@ -62,8 +62,8 @@ Manche Tests benötigen System Properties, diese können im Test umdefiniert wer
 		<junitreport todir="${reports.xml.dir}">
 			<!--<fileset dir="${reports.xml.dir}">
 				<include name="TEST-*.xml" />
-			</fileset>-->
-			<report format="frames" todir="${reports.html.dir}" /> 
+			</fileset>
+			<report format="frames" todir="${reports.html.dir}" />--> 
 		</junitreport>
 		<fail message="Tests failed. Check log and/or reports." if="test.failed" />
 	</target>
