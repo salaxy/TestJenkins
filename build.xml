@@ -1,19 +1,133 @@
-<?xml version="1.0" ?>
-<!-- HelloWorld als ant Build.xml //-->
-<!-- jedes Ant Skript besteht aus einem Projekt
-Pro Projekt muss ein Default Target definiert sein!
-//-->
-<project default="helloWorld">
-	<!-- jedes Ant Project besteht aus einer oder mehreren Targets, in denen
-Tasks ausgefuehrt werden
-Ant definiert viele Tasks : sie koennen diese einfach einsetzen
-Welche Tasks existieren sehen Sie im Manual. Wir gehen auf einige
-ein!
-//-->
-	<target name="helloWorld">
-		<echo>
-		Hello World BUILD
-		</echo>
-		<echo message="und so weiter..." />
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="TestJenkins" default="test" basedir=".">
+
+	<description>
+    Beispiel eines Ant-Builds zur Erstellung eines JUnit-Test und Report
+    </description>
+
+	<property file="build.properties" />
+
+	<path id="junit.classpath">
+		<fileset dir="${lib.dir}">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+
+	<target name="init">
+		<mkdir dir="${classes.dir}" />
+		<mkdir dir="${reports.xml.dir}" />
+		<mkdir dir="${reports.html.dir}" />
+		<mkdir dir="${inst.dir}" />
+		<mkdir dir="${cob.rep.html}" />
+		<mkdir dir="${cob.rep.xml}" />
+		<mkdir dir="${cob.rep.xml}" />
+		<mkdir dir="${cs.rep.xml}" />
+		<mkdir dir="${cs.rep.html}" />
 	</target>
+
+	<target name="compile" depends="init">
+		<javac includeantruntime="false" srcdir="${src.dir}" destdir="${classes.dir}" debug="yes">
+			<classpath refid="junit.classpath" />
+		</javac>
+		<javac includeantruntime="false" srcdir="${test.dir}" destdir="${classes.dir}" debug="yes">
+			<classpath refid="junit.classpath" />
+		</javac>
+	</target>
+
+	<target name="test" depends="compile">
+		<junit errorProperty="test.failed" failureProperty="test.failed" fork="yes">
+
+			<sysproperty key="net.sourceforge.cobertura.datafile" file="${cobdata}" />
+			<classpath location="${inst.dir}" />
+
+			<classpath location="${classes.dir}" />
+			<classpath refid="junit.classpath" />
+
+			<formatter type="brief" usefile="false" />
+			<formatter type="xml" />
+			<test name="${testcase}" todir="${reports.xml.dir}" if="testcase" />
+			<!-- ant test -Dtestcase=<fully qualified classname> -->
+			<!--
+<sysproperty key="docs.dir" value="${test.dir}/org"/>
+Manche Tests benötigen System Properties, diese können im Test umdefiniert werden.
+-->
+			<batchtest todir="${reports.xml.dir}" unless="testcase">
+				<fileset dir="${test.dir}">
+					<include name="**/*Test.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+
+		<!--<junitreport todir="${reports.xml.dir}">
+			<fileset dir="${reports.xml.dir}">
+				<include name="TEST-*.xml" />
+			</fileset>
+			<report format="frames" todir="${reports.html.dir}" />
+		</junitreport>-->
+		<fail message="Tests failed. Check log and/or reports." if="test.failed" />
+	</target>
+
+	<target name="clean" description="Remove all files created by the build/test process.">
+		<delete dir="${classes.dir}" />
+		<delete dir="${reports.dir}" />
+
+		<delete file="${cobdata}" />
+		<delete dir="${inst.dir}" />
+		<delete dir="${cob.rep}" />
+	</target>
+
+
+	<!-- =================================
+target: Cobertura
+================================= -->
+	<taskdef classpathref="junit.classpath" resource="tasks.properties" />
+	<target name="cob-instr" depends="compile">
+		<cobertura-instrument todir="${inst.dir}" datafile="${cobdata}">
+			<fileset dir="${classes.dir}">
+				<include name="**/*.class" />
+				<exclude name="**/*Test.class" />
+				<exclude name="**/*Suite.class" />
+			</fileset>
+		</cobertura-instrument>
+	</target>
+
+	<target name="cob-rep" depends="cob-instr, test" description="erzeugt Cobertura Reports">
+		<cobertura-report format="html" datafile="${cobdata}" destdir="${cob.rep.html}" srcdir="${src.dir}" />
+		<cobertura-report format="xml" datafile="${cobdata}" destdir="${cob.rep.xml}" srcdir="${src.dir}" />
+	</target>
+
+
+	<!-- =================================
+target: Checkstyle
+================================= -->
+	<taskdef resource="checkstyletask.properties" classpath="${lib.dir}/checkstyle-5.5-all.jar" />
+
+	<target name="checkstyle" description="Generates a report of code convention violations.">
+
+		<checkstyle config="config/checkstyle/sun_checks.xml" failureProperty="checkstyle.failure" failOnViolation="false">
+			<formatter type="xml" tofile="reports/checkstyle.xml" />
+			<fileset dir="src" includes="**/*.java" />
+		</checkstyle>
+
+		<xslt in="reports/checkstyle.xml" out="${cs.rep.html}/csreport.html" style="config/checkstyle/xls/checkstyle-author.xsl" />
+
+	</target>
+	<!-- =================================
+target: FindBugs
+================================= -->
+	<target name="findbugs" depends="compile">
+		<property name="findbugs.home" value="${lib.dir}/findbugs" />
+		<taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask" classpath="${findbugs.home}/findbugs-ant.jar" />
+		<findbugs home="${findbugs.home}" output="html" outputFile="reports/findbugs-ant-results.html">
+			<class location="${classes.dir}" />
+			<sourcePath path="${src.dir}" />
+			<!-- Classes needed by our code but that we don't want tested -->
+			<auxClasspath path="${lib.dir}/junit-4.5.jar" />
+		</findbugs>
+	</target>
+
+
+
+
 </project>

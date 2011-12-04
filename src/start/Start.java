@@ -7,10 +7,16 @@ public class Start {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
-		
 		//DO SOMETHING
+		
+		TestKlasse.doSomething();
+		
+		TestKlasse.doSomethingOther();
+		
+		TestKlasse.doSomethingWithBool(true);
+		
+		TestKlasse.doSomethingWithBool(true);
+		
 	}
 
 }
